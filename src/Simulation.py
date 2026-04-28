@@ -35,7 +35,7 @@ class Simulation(BaseModel):
     @property
     def turn_count(self) -> int:
         return self._turn_count
-    
+
     @property
     def current_turn(self) -> int:
         return self._current_turn
@@ -48,7 +48,9 @@ class Simulation(BaseModel):
     def start(self) -> None:
         if len(self._drones) == 0:
             self.load_drones()
-        if self._state is True:
+        if self._current_turn < self._turn_count:
+            self.next_step()
+        elif self._state is True:
             if not all(drone.location == self.map.get_end_hub()
                        for drone in self._drones):
                 self._plan_turn()
@@ -66,22 +68,28 @@ class Simulation(BaseModel):
             self._drones.append(drone)
 
     def next_step(self) -> None:
-        if self._state is True:
-            return
-        for drone in self._drones:
-            self._print_deplacement(
-                drone,
-                drone.location,
-                drone.to_next_location())
+        if self._current_turn < self._turn_count:
+            self._current_turn += 1
+            for drone in self._drones:
+                self._print_deplacement(
+                    drone,
+                    drone.location,
+                    drone.to_next_location())
+                drones_loc = {drone: drone.location for drone in self._drones}
+                self._update_capacities(drones_loc)
+        elif self._current_turn == self._turn_count and self._state is True:
+            self.start()
 
     def previous_step(self) -> None:
-        if self._state is True:
-            return
-        for drone in self._drones:
-            self._print_deplacement(
-                drone,
-                drone.location,
-                drone.to_previous_location())
+        if self._current_turn > 0:
+            self._current_turn -= 1
+            for drone in self._drones:
+                self._print_deplacement(
+                    drone,
+                    drone.location,
+                    drone.to_previous_location())
+                drones_loc = {drone: drone.location for drone in self._drones}
+                self._update_capacities(drones_loc)
 
     def _plan_turn(self) -> None:
         planned: dict[Drone, Location] = {}
@@ -121,15 +129,15 @@ class Simulation(BaseModel):
                   curr_color + curr_loc.name + Style.reset,
                   "->", next_color + next_loc.name + Style.reset)
 
-    def _update_capacities(self, planned: dict[Drone, Location]) -> None:
+    def _update_capacities(self, drones_loc: dict[Drone, Location]) -> None:
         for hub in self.map.hubs:
             hub.n_drones = 0
         for conn in self.map.connections:
             conn.n_drones = 0
-        for drone, loc in planned.items():
+        for drone, loc in drones_loc.items():
             loc.n_drones += 1
         for drone in self._drones:
-            if drone not in planned.keys():
+            if drone not in drones_loc.keys():
                 drone.location.n_drones += 1
 
     def _get_next_location(self, drone: Drone) -> Location:

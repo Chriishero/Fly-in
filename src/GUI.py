@@ -67,8 +67,6 @@ class GUI(BaseModel):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 self._auto_simulation = not self._auto_simulation
-            if event.key == pygame.K_UP:
-                self.simulation.start()
             if event.key == pygame.K_RIGHT:
                 self.simulation.next_step()
             if event.key == pygame.K_LEFT:
@@ -76,30 +74,13 @@ class GUI(BaseModel):
         elif event.type == pygame.MOUSEBUTTONDOWN:
             self._information_rect = None
             mouse_pos = pygame.mouse.get_pos()
-            for hub in self.map.hubs:
-                h_pos = self._hubs_object[hub]['position']
-                h_radius = self._hubs_object[hub]['radius']
-                if self.simulation.distance(mouse_pos, h_pos) <= h_radius:
-                    text = (f"Hub '{hub.name}':\n"
-                            f"- Type: {hub.type.value}\n"
-                            f"- Position: {hub.x}, {hub.y}\n"
-                            f"- Zone: {hub.zone.value}\n"
-                            f"- Occupancy: {hub.n_drones}/{hub.max_drones:.0f}"
-                            )
-                    w, h = self.width / 5, self.height / 5
-                    x, y = h_pos[0], h_pos[1] - h
-                    if h_pos[0] + w > self.width:
-                        x = h_pos[0] - w
-                    if h_pos[1] - h < 0:
-                        y = h_pos[1]
-                    self._information_rect = InformationRect(
-                        text=text,
-                        x=x,
-                        y=y,
-                        rect=pygame.Rect(x, y, w, h))
+            self._load_hub_information(mouse_pos)
 
     def _on_loop(self) -> None:
-        if self.simulation.state and self._auto_simulation:
+        if self.simulation.current_turn == self.simulation.turn_count \
+                and self.simulation.state is False:
+            self._auto_simulation = False
+        if self._auto_simulation is True:
             self.simulation.start()
 
     def _on_render(self) -> None:
@@ -109,6 +90,7 @@ class GUI(BaseModel):
             self._draw_hub()
             self._draw_drone()
             self._draw_information_rect()
+            self._show_turn_count()
             scaled_surface = pygame.transform.scale(
                 self._surface,
                 (int(self.width * self._scale),
@@ -118,6 +100,32 @@ class GUI(BaseModel):
             self._clock.tick(self.fps)
         except Exception as e:
             raise ValueError(f"{e}")
+
+    def _on_cleanup(self) -> None:
+        pygame.quit()
+
+    def _load_hub_information(self, position: tuple[int, int]) -> None:
+        for hub in self.map.hubs:
+            h_pos = self._hubs_object[hub]['position']
+            h_radius = self._hubs_object[hub]['radius']
+            if self.simulation.distance(position, h_pos) <= h_radius:
+                text = (f"Hub '{hub.name}':\n"
+                        f"- Type: {hub.type.value}\n"
+                        f"- Position: {hub.x}, {hub.y}\n"
+                        f"- Zone: {hub.zone.value}\n"
+                        f"- Occupancy: {hub.n_drones}/{hub.max_drones:.0f}"
+                        )
+                w, h = self.width / 5, self.height / 5
+                x, y = h_pos[0], h_pos[1] - h
+                if h_pos[0] + w > self.width:
+                    x = h_pos[0] - w
+                if h_pos[1] - h < 0:
+                    y = h_pos[1]
+                self._information_rect = InformationRect(
+                    text=text,
+                    x=x,
+                    y=y,
+                    rect=pygame.Rect(x, y, w, h))
 
     def _draw_hub(self) -> None:
         for hub in self.map.hubs:
@@ -224,5 +232,10 @@ class GUI(BaseModel):
         y_scaled += y_border
         return (int(x_scaled), int(y_scaled))
 
-    def _on_cleanup(self) -> None:
-        pygame.quit()
+    def _show_turn_count(self) -> None:
+        font = pygame.font.SysFont(None, 30)
+        turn_text = (
+            f"{self.simulation.current_turn}/{self.simulation.turn_count}"
+        )
+        render_text = font.render(turn_text, True, (0, 0, 0))
+        self._surface.blit(render_text, (0 + 10, 0 + 10))
