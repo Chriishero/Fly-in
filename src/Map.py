@@ -1,32 +1,36 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, model_validator
-from typing import Optional, Union
-from enum import Enum, auto
+from .Color import Color
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from enum import Enum
+from abc import ABC
 import numpy as np
 
 
 class Zone(Enum):
-    normal = auto()
-    blocked = auto()
-    restricted = auto()
-    priority = auto()
+    normal = "normal"
+    blocked = "blocked"
+    restricted = "restricted"
+    priority = "priority"
 
 
 class HubType(Enum):
-    NORMAL = auto()
-    START = auto()
-    END = auto()
+    NORMAL = "NORMAL"
+    START = "START"
+    END = "END"
 
 
-class Hub(BaseModel):
-    type: HubType = Field(default=HubType.NORMAL)
+class Location(ABC, BaseModel):
     name: str = Field(min_length=1)
+    max_drones: float = Field(default=1, ge=0)
+    n_drones: int = Field(default=0, ge=0)
+
+
+class Hub(Location):
+    type: HubType = Field(default=HubType.NORMAL)
     x: int
     y: int
     zone: Zone = Field(default=Zone.normal)
-    color: Optional[str] = Field(default=None)
-    max_drones: float = Field(default=1, ge=0)
-    n_drones: int = Field(default=0)
+    color: Color = Field(default=Color.RED)
     nexts: list[Connection] = Field(default_factory=list)
 
     @model_validator(mode='after')
@@ -54,12 +58,9 @@ class Hub(BaseModel):
         return (1)
 
 
-class Connection(BaseModel):
-    name: str = Field(min_length=1)
+class Connection(Location):
     prev_hub: Hub
     next_hub: Hub
-    max_link_capacity: int = Field(default=1)
-    n_drones: int = Field(default=0)
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -67,11 +68,34 @@ class Connection(BaseModel):
 
 class Drone(BaseModel):
     id: int
-    location: Union[Hub, Connection]
+    prev_location: Location | None = Field(default=None)
+    location: Location
     state: bool = Field(default=True)
+
+    _path: list[Location] = PrivateAttr(default_factory=list)
+    _current_path_index: int = PrivateAttr(default=0)
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+    @property
+    def path(self) -> list[Location]:
+        return self._path
+
+    def add_path(self, loc: Location) -> None:
+        self._path.append(loc)
+
+    def to_next_location(self) -> Location:
+        if self._current_path_index < len(self._path) - 1:
+            self._current_path_index += 1
+            self.location = self._path[self._current_path_index]
+        return self.location
+
+    def to_previous_location(self) -> Location:
+        if self._current_path_index > 0:
+            self._current_path_index -= 1
+            self.location = self._path[self._current_path_index]
+        return self.location
 
 
 class Map(BaseModel):

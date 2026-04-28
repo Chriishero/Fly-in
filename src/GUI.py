@@ -1,8 +1,18 @@
 from .Simulation import Simulation
-from .Map import Map, Connection
+from .Map import Map, Connection, Hub
 from pydantic import BaseModel, Field, PrivateAttr
 from typing import Any
 import pygame
+
+
+class InformationRect(BaseModel):
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+    text: str = Field(min_length=1)
+    x: int
+    y: int
+    rect: pygame.Rect
 
 
 class GUI(BaseModel):
@@ -14,6 +24,7 @@ class GUI(BaseModel):
     fps: int = Field(ge=5, default=5)
     map: Map
     simulation: Simulation
+    drone_size_scaling_factor: float = Field(ge=0, default=0.01)
 
     _screen: pygame.SurfaceType = PrivateAttr()
     _surface: pygame.SurfaceType = PrivateAttr()
@@ -21,13 +32,21 @@ class GUI(BaseModel):
     _drone: pygame.SurfaceType = PrivateAttr()
     _clock: pygame.time.Clock = PrivateAttr()
     _state: bool = PrivateAttr(default=False)
+    _drone_size: tuple[int, int] = PrivateAttr(default=(0, 0))
+    _auto_simulation: bool = PrivateAttr(default=False)
+    _hubs_object: dict[Hub, dict[str, Any]] = PrivateAttr(default_factory=dict)
+    _information_rect: InformationRect | None = PrivateAttr(default=None)
 
     def init(self) -> None:
         try:
             pygame.init()
             self._screen = pygame.display.set_mode((self.width, self.height))
             self._surface = pygame.Surface((self.width, self.height))
-            self._drone = pygame.image.load("resources/drone.png").convert_alpha()
+            self._drone = pygame.image.load(
+                "resources/drone.png").convert_alpha()
+            self._drone_size = (
+                int(self.width * self.drone_size_scaling_factor),
+                int(self.height * self.drone_size_scaling_factor))
             self._clock = pygame.time.Clock()
             self._state = True
         except Exception as e:
@@ -46,11 +65,42 @@ class GUI(BaseModel):
         if event.type == pygame.QUIT:
             self._state = False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_SPACE:
+                self._auto_simulation = not self._auto_simulation
+            if event.key == pygame.K_UP:
                 self.simulation.start()
+            if event.key == pygame.K_RIGHT:
+                self.simulation.next_step()
+            if event.key == pygame.K_LEFT:
+                self.simulation.previous_step()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            self._information_rect = None
+            mouse_pos = pygame.mouse.get_pos()
+            for hub in self.map.hubs:
+                h_pos = self._hubs_object[hub]['position']
+                h_radius = self._hubs_object[hub]['radius']
+                if self.simulation.distance(mouse_pos, h_pos) <= h_radius:
+                    text = (f"Hub '{hub.name}':\n"
+                            f"- Type: {hub.type.value}\n"
+                            f"- Position: {hub.x}, {hub.y}\n"
+                            f"- Zone: {hub.zone.value}\n"
+                            f"- Occupancy: {hub.n_drones}/{hub.max_drones:.0f}"
+                            )
+                    w, h = self.width / 5, self.height / 5
+                    x, y = h_pos[0], h_pos[1] - h
+                    if h_pos[0] + w > self.width:
+                        x = h_pos[0] - w
+                    if h_pos[1] - h < 0:
+                        y = h_pos[1]
+                    self._information_rect = InformationRect(
+                        text=text,
+                        x=x,
+                        y=y,
+                        rect=pygame.Rect(x, y, w, h))
 
     def _on_loop(self) -> None:
-        pass
+        if self.simulation.state and self._auto_simulation:
+            self.simulation.start()
 
     def _on_render(self) -> None:
         try:
@@ -58,6 +108,7 @@ class GUI(BaseModel):
             self._draw_connection()
             self._draw_hub()
             self._draw_drone()
+            self._draw_information_rect()
             scaled_surface = pygame.transform.scale(
                 self._surface,
                 (int(self.width * self._scale),
@@ -70,15 +121,20 @@ class GUI(BaseModel):
 
     def _draw_hub(self) -> None:
         for hub in self.map.hubs:
-            x, y = self._rescaling_positions(
-                hub.x, hub.y,
-                int(self.width / 10), int(self.height / 10)
-            )
+            if hub not in self._hubs_object.keys():
+                x, y = self._rescaling_positions(
+                    hub.x, hub.y,
+                    int(self.width / 10), int(self.height / 10)
+                )
+                radius = (self.width + self.height) / 100
+                self._hubs_object[hub] = {'position': None, 'radius': None}
+                self._hubs_object[hub]['position'] = x, y
+                self._hubs_object[hub]['radius'] = radius
             pygame.draw.circle(
                 self._surface,
-                (255, 0, 0),
-                (x, y),
-                (self.width + self.height) / 100
+                hub.color.value[1],
+                self._hubs_object[hub]['position'],
+                self._hubs_object[hub]['radius']
             )
 
     def _draw_connection(self) -> None:
@@ -100,16 +156,27 @@ class GUI(BaseModel):
 
     def _draw_drone(self) -> None:
         for drone in self.simulation._drones:
-            if isinstance(drone, Connection):
-                d_x = drone.location.prev_hub.x + drone.next_hub.x / 2
-                d_y = drone.location.prev_hub.y + drone.next_hub.y / 2
-            else:
+            x, y = 0, 0
+            if isinstance(drone.location, Connection):
+                prev_hub = drone.location.prev_hub
+                prev_x, prev_y = self._rescaling_positions(
+                    prev_hub.x, prev_hub.y,
+                    *self._drone_size
+                )
+                next_hub = drone.location.next_hub
+                next_x, next_y = self._rescaling_positions(
+                    next_hub.x, next_hub.y,
+                    *self._drone_size
+                )
+                x = (prev_x + next_x) / 2
+                y = (prev_y + next_y) / 2
+            elif isinstance(drone.location, Hub):
                 d_x = drone.location.x
                 d_y = drone.location.y
-            x, y = self._rescaling_positions(
-                d_x, d_y,
-                int(self.width / 10), int(self.height / 10)
-            )
+                x, y = self._rescaling_positions(
+                    d_x, d_y,
+                    *self._drone_size
+                )
             size_x = (self.width + self.height) / 10
             size_y = size_x
             x -= size_x / 2
@@ -117,8 +184,24 @@ class GUI(BaseModel):
             picture = pygame.transform.scale(self._drone, (size_x, size_y))
             self._surface.blit(picture, (x, y))
 
+    def _draw_information_rect(self) -> None:
+        if self._information_rect is None:
+            return
+        x, y = self._information_rect.x, self._information_rect.y
+        pygame.draw.rect(
+            self._surface,
+            (128, 128, 128),
+            self._information_rect.rect
+        )
+        font_size = 20
+        font = pygame.font.SysFont(None, font_size)
+        lines = self._information_rect.text.splitlines()
+        for i in range(len(lines)):
+            info_text = font.render(lines[i], True, (0, 0, 0))
+            self._surface.blit(info_text, (x + 10, y + font_size * i + 10))
+
     def _rescaling_positions(
-            self, x: int, y: int,
+            self, x: float, y: float,
             x_border: int, y_border: int
             ) -> tuple[int, int]:
         x_max = max(hub.x for hub in self.map.hubs)

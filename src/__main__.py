@@ -14,7 +14,10 @@ def main() -> None:
     if parser.map is not None:
         map = parser.map
         simulation = Simulation(map=map)
-        gui = GUI(map=map, simulation=simulation)
+        gui = GUI(
+            map=map,
+            simulation=simulation,
+            drone_size_scaling_factor=0.1)
         gui.init()
         gui.run()
 

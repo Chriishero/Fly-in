@@ -1,4 +1,5 @@
 from .Map import Map, Hub, Connection, Zone, HubType
+from .Color import Color
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing import Optional, Any
 import re
@@ -114,9 +115,9 @@ class Parser(BaseModel):
             metadata = re.findall(
                 r"\s*(zone=(\w+)|color=(\w+)|max_drones=(\d+))\s*",
                 match.group(5))
-            zone = None
-            color = None
-            max_drones = None
+            zone = "normal"
+            color = "red"
+            max_drones = 1
             for _, zone_val, color_val, max_drones_val in metadata:
                 if zone_val:
                     zone = zone_val
@@ -128,9 +129,9 @@ class Parser(BaseModel):
                 "name": match.group(2),
                 "x": int(match.group(3)),
                 "y": int(match.group(4)),
-                "zone": Zone.normal if zone is None else Zone[zone],
-                "color": color,
-                "max_drones": 1 if max_drones is None else max_drones
+                "zone": Zone[zone],
+                "color": Color.from_str(color),
+                "max_drones": max_drones
             }
             if match.group(1) == "start_hub":
                 hub = Hub(type=HubType.START, **parameters)
@@ -158,10 +159,10 @@ class Parser(BaseModel):
                 if match.group(3) is not None else 1
             self._connections.append(
                 Connection(
-                    name=f"{hub1}-{hub2}",
+                    name=f"{hub1.name}-{hub2.name}",
                     prev_hub=hub1,
                     next_hub=hub2,
-                    max_link_capacity=max_link_capacity)
+                    max_drones=max_link_capacity)
             )
         if not found_any:
             raise ValueError(
