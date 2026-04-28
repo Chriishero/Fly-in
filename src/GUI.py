@@ -164,7 +164,7 @@ class GUI(BaseModel):
 
     def _draw_drone(self) -> None:
         for drone in self.simulation._drones:
-            x, y = 0, 0
+            x, y = 0.0, 0.0
             if isinstance(drone.location, Connection):
                 prev_hub = drone.location.prev_hub
                 prev_x, prev_y = self._rescaling_positions(

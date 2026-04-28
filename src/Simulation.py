@@ -2,7 +2,6 @@ from .Map import Location, Hub, Connection, Drone, Map, HubType, Zone
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing import cast
 from colored import Fore, Style
-from collections import defaultdict
 import heapq
 import numpy as np
 
@@ -41,8 +40,9 @@ class Simulation(BaseModel):
         return self._current_turn
 
     @staticmethod
-    def distance(pos1: tuple[int, int], pos2: tuple[int, int]) -> int:
-        distance = np.sqrt((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
+    def distance(pos1: tuple[int, int], pos2: tuple[int, int]) -> float:
+        distance: float = np.sqrt(
+            (pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
         return (distance)
 
     def start(self) -> None:
@@ -56,7 +56,7 @@ class Simulation(BaseModel):
                 self._plan_turn()
                 self._execute_turn()
             else:
-                print("Turn count: ", self._turn_count)
+                print("Turn count:", self._turn_count)
                 self._state = False
 
     def load_drones(self) -> None:
@@ -160,7 +160,7 @@ class Simulation(BaseModel):
     def _next_location_from_hub(self, drone: Drone) -> Location:
         if not isinstance(drone.location, Hub):
             return drone.location
-        h: list = []
+        h: list[tuple[float, int, Hub]] = []
         distances = {hub: float("inf") for hub in self.map.hubs}
         previous: dict[Hub, Hub | None] = {hub: None for hub in self.map.hubs}
         distances[drone.location] = 0

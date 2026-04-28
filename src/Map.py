@@ -147,7 +147,7 @@ class Map(BaseModel):
                 conn.next_hub.nexts.append(conn)
 
     def _distance(self, hub1: Hub, hub2: Hub) -> float:
-        distance = np.sqrt((hub2.x - hub1.x)**2 + (hub2.y - hub1.y)**2)
+        distance: float = np.sqrt((hub2.x - hub1.x)**2 + (hub2.y - hub1.y)**2)
         return (distance)
 
     def get_start_hub(self) -> Hub:
