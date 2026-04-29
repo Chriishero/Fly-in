@@ -119,15 +119,11 @@ class Simulation(BaseModel):
             curr_loc: Location,
             next_loc: Location) -> None:
         if curr_loc != next_loc:
-            curr_color = ""
             next_color = ""
-            if isinstance(curr_loc, Hub):
-                curr_color = Fore.rgb(*curr_loc.color.value[1])
             if isinstance(next_loc, Hub):
                 next_color = Fore.rgb(*next_loc.color.value[1])
-            print(f"Drone {drone.id}:",
-                  curr_color + curr_loc.name + Style.reset,
-                  "->", next_color + next_loc.name + Style.reset)
+            print(f"D{drone.id}-",
+                  next_color + next_loc.name + Style.reset, sep="")
 
     def _update_capacities(self, drones_loc: dict[Drone, Location]) -> None:
         for hub in self.map.hubs:
@@ -160,17 +156,19 @@ class Simulation(BaseModel):
     def _next_location_from_hub(self, drone: Drone) -> Location:
         if not isinstance(drone.location, Hub):
             return drone.location
-        h: list[tuple[float, int, Hub]] = []
+        h: list[tuple[float, int, int, Hub]] = []
         distances = {hub: float("inf") for hub in self.map.hubs}
         previous: dict[Hub, Hub | None] = {hub: None for hub in self.map.hubs}
         distances[drone.location] = 0
+        priority = 0 if drone.location.zone is Zone.priority else 1
         """in heappush and heappop function, if two distances are equal,
         the locations of type 'Hub' will be compared, and raise an error.
         'counter' prevents that"""
         counter = 0
-        heapq.heappush(h, (distances[drone.location], counter, drone.location))
+        heapq.heappush(h, (distances[drone.location], priority,
+                           counter, drone.location))
         while h:
-            distance, _, curr_loc = heapq.heappop(h)
+            distance, _, _, curr_loc = heapq.heappop(h)
             if distance > distances[curr_loc]:
                 continue
             for conn in curr_loc.nexts:
@@ -184,8 +182,10 @@ class Simulation(BaseModel):
                 if distance + next_loc._get_cost() < distances[next_loc]:
                     distances[next_loc] = distance + next_loc._get_cost()
                     previous[next_loc] = curr_loc
+                    priority = 0 if next_loc.zone is Zone.priority else 1
                     counter += 1
-                    heapq.heappush(h, (distances[next_loc], counter, next_loc))
+                    heapq.heappush(h, (distances[next_loc], priority,
+                                       counter, next_loc))
 
         path: list[Hub] = []
         end = self.map.get_end_hub()
@@ -204,7 +204,6 @@ class Simulation(BaseModel):
                 for conn in drone.location.nexts:
                     if conn.next_hub == path[0] or conn.prev_hub == path[0]:
                         if conn.n_drones < conn.max_drones:
-                            print(f"drone {drone.id} in conn for restricted")
                             return conn
             else:
                 return path[0]

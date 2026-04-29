@@ -2,6 +2,7 @@ from .Simulation import Simulation
 from .Map import Map, Connection, Hub
 from pydantic import BaseModel, Field, PrivateAttr
 from typing import Any
+import numpy as np
 import pygame
 
 
@@ -75,6 +76,7 @@ class GUI(BaseModel):
             self._information_rect = None
             mouse_pos = pygame.mouse.get_pos()
             self._load_hub_information(mouse_pos)
+            self._load_connection_information(mouse_pos)
 
     def _on_loop(self) -> None:
         if self.simulation.current_turn == self.simulation.turn_count \
@@ -126,6 +128,54 @@ class GUI(BaseModel):
                     x=x,
                     y=y,
                     rect=pygame.Rect(x, y, w, h))
+
+    def _load_connection_information(self, position: tuple[int, int]) -> None:
+        if self._information_rect is not None:
+            return
+        for conn in self.map.connections:
+            c_start_pos = self._hubs_object[conn.prev_hub]['position']
+            c_end_pos = self._hubs_object[conn.next_hub]['position']
+            c_width = self._hubs_object[conn.prev_hub]['radius']
+            if self._distance_point_line(
+                    position, c_start_pos, c_end_pos) <= c_width:
+                t = self._is_between_point(position, c_start_pos, c_end_pos)
+                if t < 0 or t > 1:
+                    continue
+                text = (f"Connection:\n"
+                        f"- First hub: {conn.prev_hub.name}\n"
+                        f"- Second hub: {conn.next_hub.name}\n"
+                        f"- Occupancy: {conn.n_drones}/{conn.max_drones:.0f}")
+                w, h = self.width / 3, self.height / 5
+                x, y = position[0], position[1] - h
+                if position[0] + w > self.width:
+                    x = position[0] - w
+                if position[1] - h < 0:
+                    y = position[1]
+                self._information_rect = InformationRect(
+                    text=text,
+                    x=int(x),
+                    y=int(y),
+                    rect=pygame.Rect(x, y, w, h))
+
+    def _distance_point_line(
+            self, p_pos: tuple[int, int], start_pos: tuple[int, int],
+            end_pos: tuple[int, int]) -> float:
+        P = np.array(p_pos)
+        A = np.array(start_pos)
+        B = np.array(end_pos)
+        num = np.abs(np.cross(B - A, A - P))
+        denom = self.simulation.distance(end_pos, start_pos)
+        return float(num / denom)
+
+    def _is_between_point(
+            self, p_pos: tuple[int, int], start_pos: tuple[int, int],
+            end_pos: tuple[int, int]) -> float:
+        P = np.array(p_pos)
+        A = np.array(start_pos)
+        B = np.array(end_pos)
+        num = np.dot(P - A, B - A)
+        denom = np.dot(B - A, B - A)
+        return num / denom
 
     def _draw_hub(self) -> None:
         for hub in self.map.hubs:
