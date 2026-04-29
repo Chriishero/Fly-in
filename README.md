@@ -55,7 +55,7 @@ A weight/cost is assigned to each hub (node), defining a weighted undirected gra
       - Update prev[v] = curr_hub
       - Push (dist[v], v) to the heap
   - Repeat until the heap is empty
-### Conflicts handling
+#### Conflicts handling
 Dijkstra computes the PLANNED move for each drone. At this stage, the number of drones in each hub is still unchanged, but I simulate the movement by updating the 'n_drones' attribute of each location. This ensures that the next Dijkstra iteration (for the next drone) takese the updated hub/connection capacities into account.
 
 ## Visual representation

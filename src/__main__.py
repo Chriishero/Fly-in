@@ -5,6 +5,8 @@ from .Simulation import Simulation
 
 
 def main() -> None:
+    """Main function, parse the map file, instantiate and launch
+    GUI and simulation."""
     map = None
     argv = sys.argv[1:]
     if argv[0] != "--map":

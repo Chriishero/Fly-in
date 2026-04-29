@@ -7,6 +7,8 @@ import pygame
 
 
 class InformationRect(BaseModel):
+    """Contains all necessary information
+    to show hub/connection informations"""
     model_config = {
         "arbitrary_types_allowed": True
     }
@@ -17,6 +19,7 @@ class InformationRect(BaseModel):
 
 
 class GUI(BaseModel):
+    """Create and handle a pygame window"""
     model_config = {
         "arbitrary_types_allowed": True
     }
@@ -39,6 +42,8 @@ class GUI(BaseModel):
     _information_rect: InformationRect | None = PrivateAttr(default=None)
 
     def init(self) -> None:
+        """Initialize pygame and all the necessary
+        attribute"""
         try:
             pygame.init()
             self._screen = pygame.display.set_mode((self.width, self.height))
@@ -54,6 +59,7 @@ class GUI(BaseModel):
             raise ValueError(f"Failed to initialize pygame: {e}")
 
     def run(self) -> None:
+        """Launch the window"""
         self.simulation.load_drones()
         while self._state is True:
             for event in pygame.event.get():
@@ -63,6 +69,7 @@ class GUI(BaseModel):
         self._on_cleanup()
 
     def _on_event(self, event: Any) -> None:
+        """Handle all event, keydown, mouseclick and quit"""
         if event.type == pygame.QUIT:
             self._state = False
         if event.type == pygame.KEYDOWN:
@@ -79,6 +86,7 @@ class GUI(BaseModel):
             self._load_connection_information(mouse_pos)
 
     def _on_loop(self) -> None:
+        """Run the simulation"""
         if self.simulation.current_turn == self.simulation.turn_count \
                 and self.simulation.state is False:
             self._auto_simulation = False
@@ -86,6 +94,8 @@ class GUI(BaseModel):
             self.simulation.start()
 
     def _on_render(self) -> None:
+        """Render the hubs, connections, drones and
+        information rect."""
         try:
             self._surface.fill("white")
             self._draw_connection()
@@ -104,9 +114,11 @@ class GUI(BaseModel):
             raise ValueError(f"{e}")
 
     def _on_cleanup(self) -> None:
+        """Call pygame.quit()"""
         pygame.quit()
 
     def _load_hub_information(self, position: tuple[int, int]) -> None:
+        """Load an hub informations when clicking on it"""
         for hub in self.map.hubs:
             h_pos = self._hubs_object[hub]['position']
             h_radius = self._hubs_object[hub]['radius']
@@ -130,6 +142,7 @@ class GUI(BaseModel):
                     rect=pygame.Rect(x, y, w, h))
 
     def _load_connection_information(self, position: tuple[int, int]) -> None:
+        """Load a connection informations when clicking on it"""
         if self._information_rect is not None:
             return
         for conn in self.map.connections:
@@ -160,6 +173,7 @@ class GUI(BaseModel):
     def _distance_point_line(
             self, p_pos: tuple[int, int], start_pos: tuple[int, int],
             end_pos: tuple[int, int]) -> float:
+        """Compute the distance of a point from a line"""
         P = np.array(p_pos)
         A = np.array(start_pos)
         B = np.array(end_pos)
@@ -170,6 +184,8 @@ class GUI(BaseModel):
     def _is_between_point(
             self, p_pos: tuple[int, int], start_pos: tuple[int, int],
             end_pos: tuple[int, int]) -> float:
+        """Check if a point is between two others and
+        return a value, between 0 and 1 if its the case."""
         P = np.array(p_pos)
         A = np.array(start_pos)
         B = np.array(end_pos)
@@ -178,6 +194,7 @@ class GUI(BaseModel):
         return num / denom
 
     def _draw_hub(self) -> None:
+        """Draw all the hubs on the surface"""
         for hub in self.map.hubs:
             if hub not in self._hubs_object.keys():
                 x, y = self._rescaling_positions(
@@ -196,6 +213,7 @@ class GUI(BaseModel):
             )
 
     def _draw_connection(self) -> None:
+        """Draw all the connection on the surface"""
         for conn in self.map.connections:
             x_start, y_start = self._rescaling_positions(
                 conn.prev_hub.x, conn.prev_hub.y,
@@ -213,6 +231,7 @@ class GUI(BaseModel):
             )
 
     def _draw_drone(self) -> None:
+        """Draw all the drones on their current location"""
         for drone in self.simulation._drones:
             x, y = 0.0, 0.0
             if isinstance(drone.location, Connection):
@@ -243,6 +262,7 @@ class GUI(BaseModel):
             self._surface.blit(picture, (x, y))
 
     def _draw_information_rect(self) -> None:
+        """Draw the information rect if clicking on a hub/connection"""
         if self._information_rect is None:
             return
         x, y = self._information_rect.x, self._information_rect.y
@@ -262,6 +282,8 @@ class GUI(BaseModel):
             self, x: float, y: float,
             x_border: int, y_border: int
             ) -> tuple[int, int]:
+        """Recale the position extracting from the map file
+        to position between 0, 0 and W, H"""
         x_max = max(hub.x for hub in self.map.hubs)
         x_min = min(hub.x for hub in self.map.hubs)
         y_max = max(hub.y for hub in self.map.hubs)
@@ -283,6 +305,7 @@ class GUI(BaseModel):
         return (int(x_scaled), int(y_scaled))
 
     def _show_turn_count(self) -> None:
+        """Show the turn count on the screen"""
         font = pygame.font.SysFont(None, 30)
         turn_text = (
             f"{self.simulation.current_turn}/{self.simulation.turn_count}"

@@ -6,6 +6,8 @@ import re
 
 
 class Parser(BaseModel):
+    """Validate input maps files and extract all
+    the value to create a Map object."""
     model_config = {
         "arbitrary_types_allowed": True
     }
@@ -19,6 +21,7 @@ class Parser(BaseModel):
 
     @model_validator(mode='after')
     def validator(self) -> 'Parser':
+        """Model validator, check if the file is readable"""
         try:
             with open(self.map_path, 'r') as f:
                 self._map_str = f.read()
@@ -28,9 +31,11 @@ class Parser(BaseModel):
 
     @property
     def map(self) -> Optional[Map]:
+        """Getter for '_map' attribute."""
         return self._map
 
     def parse(self) -> None:
+        """Extract value from the map file"""
         hubs_regex = re.compile(
             r"^(start_hub|end_hub|hub):\s+"
             r"(\w+)\s+(-?\d+)\s+(-?\d+)\s*"
@@ -62,6 +67,7 @@ class Parser(BaseModel):
             raise ValueError(f"{e}")
 
     def _delete_comments(self, map: str) -> str:
+        """Delete comments from the map file content"""
         res: str = ""
         skip: bool = False
         for c in map:
@@ -74,6 +80,7 @@ class Parser(BaseModel):
         return (res)
 
     def _delete_empty_line(self, map: str) -> str:
+        """Delete empty lines from the map file content"""
         lines = map.splitlines()
         res: str = ""
         for line in lines:
@@ -82,6 +89,7 @@ class Parser(BaseModel):
         return (res)
 
     def _load_nb_drones(self, map: str) -> None:
+        """Extract the parameter 'nb_drones'"""
         m = re.match(r"nb_drones:\s+(\d+)\s*$", map.splitlines()[0])
         if not m:
             raise ValueError(
@@ -95,6 +103,7 @@ class Parser(BaseModel):
 
     def _load_hubs(
             self, hubs_regex: Any, map: str) -> None:
+        """Extract all the hubs attributes and create them"""
         matches = list(hubs_regex.finditer(map))
         all_hub = list(re.finditer(
             r"^(start_hub|end_hub|hub):(.*)", map, flags=re.MULTILINE))
@@ -149,6 +158,7 @@ class Parser(BaseModel):
 
     def _load_connections(
             self, connections_regex: Any, map: str) -> None:
+        """Extract all the connections attributes and create them."""
         matches = connections_regex.finditer(map)
         found_any = False
         for match in matches:
@@ -172,6 +182,7 @@ class Parser(BaseModel):
             )
 
     def _get_hub(self, name: str) -> Hub:
+        """Get an specific hub by its name."""
         for hub in self._hubs:
             if hub.name == name:
                 return hub
@@ -180,6 +191,7 @@ class Parser(BaseModel):
         )
 
     def _check_number_of_occurences(self, text: str, map: str) -> None:
+        """Check if a field appear more or less than one time in the map"""
         occurences = re.findall(
             fr"^{text}:", map, flags=re.MULTILINE)
         if len(occurences) != 1:

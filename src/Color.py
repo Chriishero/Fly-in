@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class Color(Enum):
+    """Enumeration for color, map string with RGB value"""
     BLACK = ("black", (0, 0, 0))
     WHITE = ("white", (255, 255, 255))
     RED = ("red", (255, 0, 0))
@@ -24,10 +25,12 @@ class Color(Enum):
 
     @property
     def rgb(self) -> tuple[int, int, int]:
+        """Return the RGB value of the color"""
         return self.value[1]
 
     @classmethod
     def from_str(cls, name: str) -> "Color":
+        """Return the right Color class from a string"""
         for color in cls:
             if color.value[0] == name:
                 return color
