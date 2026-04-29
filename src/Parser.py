@@ -54,6 +54,7 @@ class Parser(BaseModel):
         )
         map_no_comments: str = self._delete_comments(self._map_str)
         clean_map: str = self._delete_empty_line(map_no_comments)
+        self._check_field(clean_map)
         self._load_nb_drones(clean_map)
         self._load_hubs(hubs_regex, clean_map)
         self._load_connections(connections_regex, clean_map)
@@ -88,6 +89,19 @@ class Parser(BaseModel):
                 res += line + "\n"
         return (res)
 
+    def _check_field(self, map: str) -> None:
+        """Check if there are only 'nb_drones', 'hub'
+        'connection', 'start_hub', or 'end_hub' in
+        the map fields"""
+        lines = map.splitlines()
+        for line in lines:
+            res = line.split(":")
+            if res[0] not in ("nb_drones", "hub",
+                              "start_hub", "end_hub",
+                              "connection"):
+                raise ValueError(
+                    f"Invalid field '{res[0]}'")
+
     def _load_nb_drones(self, map: str) -> None:
         """Extract the parameter 'nb_drones'"""
         m = re.match(r"nb_drones:\s+(\d+)\s*$", map.splitlines()[0])
@@ -121,19 +135,28 @@ class Parser(BaseModel):
         self._check_number_of_occurences("end_hub", map)
         for match in matches:
             found_any = True
-            metadata = re.findall(
-                r"\s*(zone=(\w+)|color=(\w+)|max_drones=(\d+))\s*",
-                match.group(5))
+            raw = match.group(5) or ""
+            tokens = raw.split()
+            allowed = {"zone", "color", "max_drones"}
             zone = "normal"
             color = "red"
             max_drones = 1
-            for _, zone_val, color_val, max_drones_val in metadata:
-                if zone_val:
-                    zone = zone_val
-                if color_val:
-                    color = color_val
-                if max_drones_val:
-                    max_drones = int(max_drones_val)
+            for token in tokens:
+                if "=" not in token:
+                    raise ValueError(
+                        f"Invalid metadata '{token}' (missing '=')")
+                key, value = token.split("=", 1)
+                if key not in allowed:
+                    raise ValueError(
+                        f"Invalid metadata key '{key}'. "
+                        f"Allowed: {', '.join(allowed)}"
+                    )
+                if key == "zone":
+                    zone = value
+                elif key == "color":
+                    color = value
+                elif key == "max_drones":
+                    max_drones = int(value)
             parameters = {
                 "name": match.group(2),
                 "x": int(match.group(3)),

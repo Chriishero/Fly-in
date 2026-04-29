@@ -210,7 +210,13 @@ class Simulation(BaseModel):
                     counter += 1
                     heapq.heappush(h, (distances[next_loc], priority,
                                        counter, next_loc))
+        return self._reconstruct_path(drone, previous)
 
+    def _reconstruct_path(
+            self, drone: Drone, previous: dict[Hub, Hub | None]
+            ) -> Location:
+        if not isinstance(drone.location, Hub):
+            return drone.location
         path: list[Hub] = []
         end = self.map.get_end_hub()
         head: Hub = drone.location

@@ -148,7 +148,7 @@ class GUI(BaseModel):
         for conn in self.map.connections:
             c_start_pos = self._hubs_object[conn.prev_hub]['position']
             c_end_pos = self._hubs_object[conn.next_hub]['position']
-            c_width = self._hubs_object[conn.prev_hub]['radius']
+            c_width = self._hubs_object[conn.prev_hub]['radius'] / 2
             if self._distance_point_line(
                     position, c_start_pos, c_end_pos) <= c_width:
                 t = self._is_between_point(position, c_start_pos, c_end_pos)
