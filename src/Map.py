@@ -7,10 +7,10 @@ from abc import ABC
 
 class Zone(Enum):
     """Enumeration for the zone type"""
-    normal = "normal"
-    blocked = "blocked"
-    restricted = "restricted"
-    priority = "priority"
+    priority = 0
+    normal = 1
+    restricted = 2
+    blocked = 3
 
 
 class HubType(Enum):
@@ -57,7 +57,7 @@ class Hub(Location):
         """Make the class hashable"""
         return hash(self.name)
 
-    def _get_cost(self) -> int:
+    def get_cost(self) -> int:
         """Return the cost of the hub"""
         if self.zone == Zone.restricted:
             return (2)

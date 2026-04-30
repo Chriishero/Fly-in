@@ -35,28 +35,33 @@ make lint-strict
 ## Resources
 - Documentation on the Dijkstra and A* algorithm
 - Documentation of pygame (and few tutorial)
-- AI to understand the Dijkstra algorithm
+- AI to understand the A* algorithm
 
 ## Algorithm explanation
-The main algorithm used is the Dijkstra algorithm.
-A weight/cost is assigned to each hub (node), defining a weighted undirected graph. This algorithm computes the shortest path from the source (start hub) to all other hubs (nodes) in the graph.
+The main algorithm used is the A* algorithm.
+A weight/cost is assigned to each hub (node), defining a weighted undirected graph. This algorithm computes the shortest path from the source (start hub) to all other hubs (nodes) in the graph using the weights and an heuristic (set to 0 here).
 #### Detailed steps:
 - Create an empty priority queue (heap).
-- Create a distance dictionary 'dist' of size n_hubs and set all values to infinity. It maps each hub to their distance from the start.
+- Create a distance dictionary 'g_score' of size n_hubs and set all values to infinity. It maps each hub to their distance/cost from the start.
+- Create a dictionary 'f_score' of size n_hubs and set all values to infinity. It maps each hub to their g_score + heuristic from the start
 - Create a previous dictionary 'prev' of size n_hubs and set all values to None. It maps each hub to their previous hub in the graph.
 - Set the start hub distance to 0 and insert it into the heap.
 - While the heap is not empty
-  - Pop the hub with the smallest distance value.
-  - If the popped distance is greater than the recorded distance.  
+  - Pop the hub with the smallest f_score value.
+  - If the popped f_sore is greater than the recorded f_score.  
     - skip it and continue
   - For each neighbors v of curr_hub
-    - If dist[curr_hub] + cost of v < dist[v]:
-      - Update dist[v] = dist[u] + cost
+    g = g_score[curr_hub] + cost of v
+    h = heuristic(curr_hub, v)
+    f = g + h
+    - If f < f_score(v):
+      - Update f_score[v] = f
+      - Update g_score[v] = g
       - Update prev[v] = curr_hub
-      - Push (dist[v], v) to the heap
+      - Push (f, v) to the heap
   - Repeat until the heap is empty
 #### Conflicts handling
-Dijkstra computes the PLANNED move for each drone. At this stage, the number of drones in each hub is still unchanged, but I simulate the movement by updating the 'n_drones' attribute of each location. This ensures that the next Dijkstra iteration (for the next drone) takese the updated hub/connection capacities into account.
+A* computes the PLANNED move for each drone. At this stage, the number of drones in each hub is still unchanged, but I simulate the movement by updating the 'n_drones' attribute of each location. This ensures that the next A* iteration (for the next drone) takes the updated hub/connection capacities into account.
 
 ## Visual representation
 Each hub has an associated color, defined in the maps files.

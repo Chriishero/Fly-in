@@ -1,8 +1,7 @@
-from .Map import Location, Hub, Connection, Drone, Map, HubType, Zone
+from .Map import Location, Hub, Drone, Map, HubType
+from .PathFinder import PathFinder
 from pydantic import BaseModel, PrivateAttr, model_validator
-from typing import cast
 from colored import Fore, Style
-import heapq
 import numpy as np
 
 
@@ -15,6 +14,7 @@ class Simulation(BaseModel):
         "arbitrary_types_allowed": True
     }
     map: Map
+    pathfinder: PathFinder
 
     _state: bool = PrivateAttr(default=True)
     _drones: list[Drone] = PrivateAttr(default_factory=list)
@@ -113,7 +113,7 @@ class Simulation(BaseModel):
         """Plan the next location of each drone."""
         planned: dict[Drone, Location] = {}
         for drone in self._drones:
-            next_loc = self._get_next_location(drone)
+            next_loc = self.pathfinder.get_next_location(drone)
             planned[drone] = next_loc
             self._update_capacities(planned)
         self._planned_moves = planned
@@ -157,84 +157,3 @@ class Simulation(BaseModel):
         for drone in self._drones:
             if drone not in drones_loc.keys():
                 drone.location.n_drones += 1
-
-    def _get_next_location(self, drone: Drone) -> Location:
-        """Get the next location of a specific drone."""
-        location = drone.location
-        if location == self.map.get_end_hub():
-            return location
-        if isinstance(location, Connection):
-            return self._next_location_from_conn(drone)
-        return self._next_location_from_hub(drone)
-
-    def _next_location_from_conn(self, drone: Drone) -> Hub:
-        """If the drone is in a connection, chose between
-        the previous and the next hub for its next location."""
-        if not isinstance(drone.location, Connection):
-            return cast(Hub, drone.location)
-        next = drone.location.next_hub
-        prev = drone.location.prev_hub
-        if next == drone.prev_location and prev.n_drones < prev.max_drones:
-            return prev
-        return (next if next.n_drones < next.max_drones else prev)
-
-    def _next_location_from_hub(self, drone: Drone) -> Location:
-        """Use Dijkstra algorithm to get the next location
-        of a specific drone"""
-        if not isinstance(drone.location, Hub):
-            return drone.location
-        h: list[tuple[float, int, int, Hub]] = []
-        distances = {hub: float("inf") for hub in self.map.hubs}
-        previous: dict[Hub, Hub | None] = {hub: None for hub in self.map.hubs}
-        distances[drone.location] = 0
-        priority = 0 if drone.location.zone is Zone.priority else 1
-        counter = 0
-        heapq.heappush(h, (distances[drone.location], priority,
-                           counter, drone.location))
-        while h:
-            distance, _, _, curr_loc = heapq.heappop(h)
-            if distance > distances[curr_loc]:
-                continue
-            for conn in curr_loc.nexts:
-                next_loc = conn.next_hub if conn.next_hub != curr_loc \
-                    else conn.prev_hub
-                if next_loc.n_drones >= next_loc.max_drones \
-                        and next_loc.zone != Zone.restricted:
-                    continue
-                if next_loc.zone == Zone.blocked:
-                    continue
-                if distance + next_loc._get_cost() < distances[next_loc]:
-                    distances[next_loc] = distance + next_loc._get_cost()
-                    previous[next_loc] = curr_loc
-                    priority = 0 if next_loc.zone is Zone.priority else 1
-                    counter += 1
-                    heapq.heappush(h, (distances[next_loc], priority,
-                                       counter, next_loc))
-        return self._reconstruct_path(drone, previous)
-
-    def _reconstruct_path(
-            self, drone: Drone, previous: dict[Hub, Hub | None]
-            ) -> Location:
-        if not isinstance(drone.location, Hub):
-            return drone.location
-        path: list[Hub] = []
-        end = self.map.get_end_hub()
-        head: Hub = drone.location
-        for hub, prev in previous.items():
-            d1 = Simulation.distance((hub.x, hub.y), (end.x, end.y))
-            d2 = Simulation.distance((head.x, head.y), (end.x, end.y))
-            if d1 < d2 and prev is not None:
-                head = hub
-        while previous[head] is not None:
-            path.append(head)
-            head = cast(Hub, previous[head])
-        path.reverse()
-        if path:
-            if path[0].zone == Zone.restricted:
-                for conn in drone.location.nexts:
-                    if conn.next_hub == path[0] or conn.prev_hub == path[0]:
-                        if conn.n_drones < conn.max_drones:
-                            return conn
-            else:
-                return path[0]
-        return drone.location

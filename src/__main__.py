@@ -2,6 +2,7 @@ import sys
 from .Parser import Parser
 from .GUI import GUI
 from .Simulation import Simulation
+from .PathFinder import PathFinder
 
 
 def main() -> None:
@@ -16,7 +17,8 @@ def main() -> None:
         parser.parse()
         if parser.map is not None:
             map = parser.map
-            simulation = Simulation(map=map)
+            pathfinder = PathFinder(map=map)
+            simulation = Simulation(map=map, pathfinder=pathfinder)
             gui = GUI(
                 map=map,
                 simulation=simulation,

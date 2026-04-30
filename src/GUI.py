@@ -123,10 +123,11 @@ class GUI(BaseModel):
             h_pos = self._hubs_object[hub]['position']
             h_radius = self._hubs_object[hub]['radius']
             if self.simulation.distance(position, h_pos) <= h_radius:
+                zones = ["priority", "normal", "restricted", "blocked"]
                 text = (f"Hub '{hub.name}':\n"
                         f"- Type: {hub.type.value}\n"
                         f"- Position: {hub.x}, {hub.y}\n"
-                        f"- Zone: {hub.zone.value}\n"
+                        f"- Zone: {zones[hub.zone.value]}\n"
                         f"- Occupancy: {hub.n_drones}/{hub.max_drones:.0f}"
                         )
                 w, h = self.width / 5, self.height / 5
