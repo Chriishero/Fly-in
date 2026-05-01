@@ -23,7 +23,7 @@ class PathFinder(BaseModel):
     def _get_next_location_from_hub(self, drone: Drone) -> Location:
         if not isinstance(drone.location, Hub):
             return drone.location
-        start = cast(Hub, drone.location)
+        start = drone.location
         end = self.map.get_end_hub()
         prev_forward = self._a_star_search(drone=drone, from_end=False)
         if prev_forward[end] is not None:
@@ -106,7 +106,7 @@ class PathFinder(BaseModel):
             ) -> Location:
         """Get the next location of the drone from the reversed path"""
         path: list[Hub] = []
-        head = target
+        head: Hub | None = target
         while head is not None:
             path.append(head)
             head = prev[head]
@@ -129,9 +129,9 @@ class PathFinder(BaseModel):
         """Number of hub which separate origin from target
         using 'prev' dict."""
         d = 0
-        head = target
+        head: Hub | None = target
         while head != origin:
-            head = prev[head]
+            head = prev[cast(Hub, head)]
             d += 1
             if head is None:
                 return (float("inf"))

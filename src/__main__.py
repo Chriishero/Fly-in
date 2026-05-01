@@ -25,6 +25,8 @@ def main() -> None:
                 drone_size_scaling_factor=0.1)
             gui.init()
             gui.run()
+    except KeyboardInterrupt:
+        print("\nExit with keyboard interrupt.")
     except Exception as e:
         print(e)
 

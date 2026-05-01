@@ -140,7 +140,7 @@ class Parser(BaseModel):
             allowed = {"zone", "color", "max_drones"}
             zone = "normal"
             color = "red"
-            max_drones = 1
+            max_drones = 1.0
             for token in tokens:
                 if "=" not in token:
                     raise ValueError(
@@ -156,7 +156,7 @@ class Parser(BaseModel):
                 elif key == "color":
                     color = value
                 elif key == "max_drones":
-                    max_drones = int(value)
+                    max_drones = float(value)
             parameters = {
                 "name": match.group(2),
                 "x": int(match.group(3)),
@@ -195,7 +195,7 @@ class Parser(BaseModel):
                     name=f"{hub1.name}-{hub2.name}",
                     prev_hub=hub1,
                     next_hub=hub2,
-                    max_drones=max_link_capacity)
+                    max_drones=float(max_link_capacity))
             )
         if not found_any:
             raise ValueError(

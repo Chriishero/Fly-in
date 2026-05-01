@@ -73,6 +73,8 @@ class GUI(BaseModel):
         if event.type == pygame.QUIT:
             self._state = False
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self._state = False
             if event.key == pygame.K_SPACE:
                 self._auto_simulation = not self._auto_simulation
             if event.key == pygame.K_RIGHT:
@@ -162,9 +164,9 @@ class GUI(BaseModel):
                 w, h = self.width / 3, self.height / 5
                 x, y = position[0], position[1] - h
                 if position[0] + w > self.width:
-                    x = position[0] - w
+                    x = int(position[0] - w)
                 if position[1] - h < 0:
-                    y = position[1]
+                    y = int(position[1])
                 self._information_rect = InformationRect(
                     text=text,
                     x=int(x),
@@ -192,7 +194,7 @@ class GUI(BaseModel):
         B = np.array(end_pos)
         num = np.dot(P - A, B - A)
         denom = np.dot(B - A, B - A)
-        return num / denom
+        return float(num / denom)
 
     def _draw_hub(self) -> None:
         """Draw all the hubs on the surface"""
