@@ -7,5 +7,18 @@ dependencies = [
     "pydantic",
     "pygame",
 	"numpy",
-    "colored"
+    "colored",
+	"flake8",
+	"flake8-pyproject",
+	"mypy"
+]
+
+[tool.mypy]
+exclude = [
+	".venv"
+]
+
+[tool.flake8]
+exclude = [
+	".venv"
 ]

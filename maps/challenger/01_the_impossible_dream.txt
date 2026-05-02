@@ -2,7 +2,8 @@
 # WARNING: This map is designed to be extremely challenging and may not be solvable
 # by most algorithms. It's intended as a stress test and research challenge.
 # The goal is NOT to validate this map but to push algorithmic limits.
-nb_drones: 3 #ouioui
+
+nb_drones: 25
 
 # === LAYER 0: The Nightmare Begins ===
 start_hub: start 0 0 [color=green max_drones=25]
@@ -85,6 +86,7 @@ hub: final_torture5 20 0 [color=crimson max_drones=1]
 
 # The ultimate goal
 end_hub: impossible_goal 21 0 [color=rainbow max_drones=25]
+
 # === CONNECTIONS: The Web of Suffering ===
 
 # Layer 0 connections (bottleneck hell)
@@ -97,7 +99,22 @@ connection: gate_hell4-gate_hell5 [max_link_capacity=1]
 # Layer 1 connections (maze of despair)
 connection: gate_hell1-maze_trap_a1
 connection: gate_hell2-maze_trap_b1
+connection: gate_hell3-maze_loop1
 
+connection: maze_trap_a1-maze_trap_a2
+connection: maze_trap_a2-maze_trap_a3
+connection: maze_trap_a3-maze_dead_a
+
+connection: maze_trap_b1-maze_trap_b2
+connection: maze_trap_b2-maze_trap_b3
+connection: maze_trap_b3-maze_dead_b
+
+connection: maze_loop1-maze_loop2
+connection: maze_loop2-maze_loop3
+connection: maze_loop3-maze_loop4
+connection: maze_loop4-maze_loop5
+connection: maze_loop5-maze_loop6
+connection: maze_loop6-maze_loop1
 
 # Escape routes from maze (very limited)
 connection: maze_trap_a2-micro_gate1

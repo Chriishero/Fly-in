@@ -49,7 +49,7 @@ class GUI(BaseModel):
             self._screen = pygame.display.set_mode((self.width, self.height))
             self._surface = pygame.Surface((self.width, self.height))
             self._drone = pygame.image.load(
-                "resources/drone.png").convert_alpha()
+                "resources/drone.bmp").convert_alpha()
             self._drone_size = (
                 int(self.width * self.drone_size_scaling_factor),
                 int(self.height * self.drone_size_scaling_factor))
