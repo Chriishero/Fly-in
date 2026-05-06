@@ -1,15 +1,18 @@
 from .Map import Location, Hub, Connection, Map, Zone, Drone
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import cast
 import heapq
 import numpy as np
 
 
 class PathFinder(BaseModel):
+    """Class containing all the necessary functions to find the
+    complete path of all drones."""
     model_config = {
         "arbitrary_types_allowed": True
     }
     map: Map
+    first_iter: bool = Field(default=True)
 
     def get_next_location(self, drone: Drone) -> Location:
         """Get the next location of a specific drone."""
@@ -21,11 +24,18 @@ class PathFinder(BaseModel):
         return self._get_next_location_from_hub(drone)
 
     def _get_next_location_from_hub(self, drone: Drone) -> Location:
+        """If the drone is actually located on an hub, use A*
+        to find the next location."""
         if not isinstance(drone.location, Hub):
             return drone.location
         start = drone.location
         end = self.map.get_end_hub()
         prev_forward = self._a_star_search(drone=drone, from_end=False)
+        if self.first_iter is True and prev_forward[end] is None:
+            raise ValueError(
+                "Invalid map, not solvable."
+            )
+        self.first_iter = False
         if prev_forward[end] is not None:
             return self._reconstruct_next_step(start, end, prev_forward, drone)
         reachable = [
@@ -54,6 +64,7 @@ class PathFinder(BaseModel):
     def _a_star_search(
             self, drone: Drone, from_end: bool
             ) -> dict[Hub, Hub | None]:
+        """A* algorithm that return a 'previous' dict."""
         open_list: list[tuple[float, int, int, Hub]] = []
         start = cast(Hub, drone.location)
         end = self.map.get_end_hub()

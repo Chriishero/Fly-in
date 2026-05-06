@@ -3,7 +3,9 @@ from .Map import Map, Connection, Hub
 from pydantic import BaseModel, Field, PrivateAttr
 from typing import Any
 import numpy as np
+import os
 import pygame
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
 
 class InformationRect(BaseModel):

@@ -25,6 +25,8 @@ class Simulation(BaseModel):
 
     @model_validator(mode='after')
     def validator(self) -> "Simulation":
+        """model validator, check if all drones start at the
+        start hub"""
         if not all(isinstance(drone.location, Hub)
                    and drone.location.type == HubType.START
                    for drone in self._drones):
